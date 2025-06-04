@@ -2,6 +2,7 @@ import { QueueClient, QueueServiceClient } from '@azure/storage-queue';
 import { Inject, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { AZURE_STORAGE_QUEUE_CONFIG_PROVIDER } from '../constants/azure-storage-queue.constants';
 import { AzureStorageQueueConfig } from '../interfaces/azure-storage-queue-config.interface';
+import { AzureStorageQueueMessage } from '../interfaces/azure-storage-queue-message.interface';
 import { AzureStorageQueuePollingOptions } from '../interfaces/azure-storage-queue-polling-options.interface';
 
 @Injectable()
@@ -38,13 +39,7 @@ export class AzureStorageQueueService implements OnModuleDestroy {
 
   async startPolling<T = string>(
     options: AzureStorageQueuePollingOptions,
-    handler: (message: {
-      id: string;
-      body: T;
-      dequeueCount: number;
-      insertedOn: Date;
-      expiresOn: Date;
-    }) => Promise<void>,
+    handler: (message: AzureStorageQueueMessage<T>) => Promise<void>,
   ): Promise<void> {
     const {
       queueName,
