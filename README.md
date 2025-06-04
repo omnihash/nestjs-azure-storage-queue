@@ -20,9 +20,9 @@ A NestJS module for seamless Azure Storage Queue integration with automatic mess
 ## Installation
 
 ```bash
-npm install @omnihash/nestjs-azure-storage @azure/storage-queue
+npm install @omnihash/nestjs-azure-storage-queue @azure/storage-queue
 # or
-yarn add @omnihash/nestjs-azure-storage @azure/storage-queue
+yarn add @omnihash/nestjs-azure-storage-queue @azure/storage-queue
 ```
 
 ---
@@ -43,7 +43,7 @@ AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=youra
 // app.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AzureStorageQueueModule } from '@omnihash/nestjs-azure-storage';
+import { AzureStorageQueueModule } from '@omnihash/nestjs-azure-storage-queue';
 import { MessageProcessorService } from './message-processor.service';
 
 @Module({
@@ -77,7 +77,7 @@ export class AppModule {}
 ```typescript
 // message-processor.service.ts
 import { Injectable, Logger } from '@nestjs/common';
-import { AzureStorageQueueHandler } from '@omnihash/nestjs-azure-storage';
+import { AzureStorageQueueHandler } from '@omnihash/nestjs-azure-storage-queue';
 
 @Injectable()
 export class MessageProcessorService {
@@ -157,7 +157,7 @@ export class MessageProcessorService {
 
 ```typescript
 // app.module.ts
-import { AzureStorageQueueModule } from '@omnihash/nestjs-azure-storage';
+import { AzureStorageQueueModule } from '@omnihash/nestjs-azure-storage-queue';
 
 @Module({
   imports: [
@@ -176,7 +176,7 @@ export class AppModule {}
 
 ```typescript
 import { Injectable } from '@nestjs/common';
-import { AzureStorageQueueService } from '@omnihash/nestjs-azure-storage';
+import { AzureStorageQueueService } from '@omnihash/nestjs-azure-storage-queue';
 
 @Injectable()
 export class NotificationService {
