@@ -26,14 +26,25 @@ export class AzureStorageQueueService implements OnModuleDestroy {
     return queueClient;
   }
 
-  async sendMessage(queueName: string, message: string): Promise<void> {
+  async sendMessage<T = string>(queueName: string, message: T): Promise<void> {
     const queueClient = await this.createQueueIfNotExists(queueName);
-    await queueClient.sendMessage(message);
+
+    // Handle different message types - serialize objects to JSON strings
+    const messageContent =
+      typeof message === 'string' ? message : JSON.stringify(message);
+
+    await queueClient.sendMessage(messageContent);
   }
 
-  async startPolling(
+  async startPolling<T = string>(
     options: AzureStorageQueuePollingOptions,
-    handler: (message: any) => Promise<void>,
+    handler: (message: {
+      id: string;
+      body: T;
+      dequeueCount: number;
+      insertedOn: Date;
+      expiresOn: Date;
+    }) => Promise<void>,
   ): Promise<void> {
     const {
       queueName,
@@ -61,9 +72,16 @@ export class AzureStorageQueueService implements OnModuleDestroy {
         if (response.receivedMessageItems?.length) {
           for (const message of response.receivedMessageItems) {
             try {
+              // Parse messageText as JSON if T is not a string type
+              const parsedBody =
+                typeof message.messageText === 'string' &&
+                message.messageText.startsWith('{')
+                  ? (JSON.parse(message.messageText) as T)
+                  : (message.messageText as unknown as T);
+
               await handler({
                 id: message.messageId,
-                body: message.messageText,
+                body: parsedBody,
                 dequeueCount: message.dequeueCount,
                 insertedOn: message.insertedOn,
                 expiresOn: message.expiresOn,
