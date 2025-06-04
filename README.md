@@ -2,6 +2,8 @@
 
 A NestJS module for seamless Azure Storage Queue integration with automatic message processing through decorators.
 
+**NOTE:** This module is currently under development. Please do not use in production.
+
 ---
 
 ## Features
