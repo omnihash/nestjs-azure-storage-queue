@@ -1,6 +1,4 @@
-<p align="center">
-  <a href="https://omnihash.com" target="blank"><img src="https://raw.githubusercontent.com/omnihash/nestjs-azure-storage-queue/refs/heads/main/oh_nest.png" width="240" alt="Omnihash + Nest Logo" /></a>
-</p>
+![Omnihash + Nest](oh_nest.png)
 
 A NestJS module for seamless Azure Storage Queue integration with automatic message processing through decorators.
 
