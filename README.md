@@ -1,4 +1,4 @@
-![Omnihash + Nest](oh_nest.png)
+![Omnihash + Nest](oh_nest_new.png)
 
 A NestJS module for seamless Azure Storage Queue integration with automatic message processing through decorators.
 
