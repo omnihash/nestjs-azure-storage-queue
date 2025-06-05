@@ -1,6 +1,5 @@
-export interface AzureStorageQueuePollingOptions<T = string> {
+export interface AzureStorageQueuePollingOptions {
   queueName: string;
-  messageBodyType: T;
   pollingInterval?: number;
   visibilityTimeout?: number;
   maxDequeueCount?: number;

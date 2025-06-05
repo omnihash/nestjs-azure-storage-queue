@@ -507,7 +507,7 @@ async handleOrder(message: AzureStorageQueueMessage<OrderDto>}) {
 Decorator to mark methods as queue message handlers.
 
 ```typescript
-@AzureStorageQueueHandler<T = string>(options: AzureStorageQueuePollingOptions<T>)
+@AzureStorageQueueHandler(options: AzureStorageQueuePollingOptions)
 ```
 
 Where `T` is the type of message body you expect to receive.

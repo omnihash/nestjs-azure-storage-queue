@@ -27,7 +27,16 @@ export class AzureStorageQueueService implements OnModuleDestroy {
     return queueClient;
   }
 
-  async sendMessage<T = string>(queueName: string, message: T): Promise<void> {
+  async sendMessage(
+    queueName: string,
+    message:
+      | string
+      | Record<string, any>
+      | Record<string, any>[]
+      | string[]
+      | number[]
+      | boolean[],
+  ): Promise<void> {
     const queueClient = await this.createQueueIfNotExists(queueName);
 
     // Handle different message types - serialize objects to JSON strings
@@ -37,9 +46,9 @@ export class AzureStorageQueueService implements OnModuleDestroy {
     await queueClient.sendMessage(messageContent);
   }
 
-  async startPolling<T = string>(
+  async startPolling(
     options: AzureStorageQueuePollingOptions,
-    handler: (message: AzureStorageQueueMessage<T>) => Promise<void>,
+    handler: (message: AzureStorageQueueMessage) => Promise<void>,
   ): Promise<void> {
     const {
       queueName,
@@ -67,12 +76,12 @@ export class AzureStorageQueueService implements OnModuleDestroy {
         if (response.receivedMessageItems?.length) {
           for (const message of response.receivedMessageItems) {
             try {
-              // Parse messageText as JSON if T is not a string type
+              // Parse messageText as JSON if not a string type
               const parsedBody =
                 typeof message.messageText === 'string' &&
                 message.messageText.startsWith('{')
-                  ? (JSON.parse(message.messageText) as T)
-                  : (message.messageText as unknown as T);
+                  ? JSON.parse(message.messageText)
+                  : message.messageText;
 
               await handler({
                 id: message.messageId,
