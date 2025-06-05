@@ -1,6 +1,6 @@
 {
   "name": "@omnihash/nestjs-azure-storage-queue",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A NestJS module for Azure Storage Queue listening",
   "author": "Omnihash",
   "license": "MIT",
