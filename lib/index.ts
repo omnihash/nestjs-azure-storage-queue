@@ -7,6 +7,8 @@ export * from './services/azure-storage-queue.service';
 
 // Interfaces
 export * from './interfaces/azure-storage-queue-config.interface';
+export * from './interfaces/azure-storage-queue-message.interface';
+export * from './interfaces/azure-storage-queue-polling-options.interface';
 
 // Constants
 export * from './constants/azure-storage-queue.constants';

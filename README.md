@@ -13,7 +13,8 @@ A NestJS module for seamless Azure Storage Queue integration with automatic mess
 ⚙️ **Flexible Configuration** - Support for both synchronous and asynchronous configuration  
 🛡️ **Error Handling** - Automatic retry logic with configurable dequeue limits  
 📝 **Comprehensive Logging** - Built-in logging for monitoring and debugging  
-🚀 **Auto-discovery** - Automatically discovers and registers queue handlers at startup
+🚀 **Auto-discovery** - Automatically discovers and registers queue handlers at startup  
+🧩 **Type Safety** - Full TypeScript support with generic types for message handling
 
 ---
 
@@ -79,42 +80,74 @@ export class AppModule {}
 import { Injectable, Logger } from '@nestjs/common';
 import { AzureStorageQueueHandler } from '@omnihash/nestjs-azure-storage-queue';
 
+// Define your custom message types for type safety
+interface UserNotification {
+  userId: string;
+  message: string;
+  timestamp: string;
+}
+
+interface OrderData {
+  orderId: string;
+  customerName: string;
+  items: Array<{ id: string; quantity: number }>;
+  total: number;
+}
+
 @Injectable()
 export class MessageProcessorService {
   private readonly logger = new Logger(MessageProcessorService.name);
 
-  @AzureStorageQueueHandler({
+  @AzureStorageQueueHandler<UserNotification>({
     queueName: 'user-notifications',
     pollingInterval: 3000,
     visibilityTimeout: 30,
     maxDequeueCount: 1,
     maxMessages: 10,
+    messageBodyType: {} as UserNotification, // Type hint for message body
   })
-  async handleUserNotifications(message: any) {
+  async handleUserNotifications(message: {
+    id: string;
+    body: UserNotification;
+    dequeueCount: number;
+    insertedOn: Date;
+    expiresOn: Date;
+  }) {
     this.logger.log(`Processing user notification: ${message.id}`);
-    this.logger.log(`Message body: ${message.body}`);
 
-    // Process your message here
-    const data = JSON.parse(message.body);
+    // Strongly typed message body - no need for parsing
+    const notification = message.body;
+    this.logger.log(
+      `Notification for user ${notification.userId}: ${notification.message}`,
+    );
 
     // Simulate processing
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    this.logger.log(`Completed processing message: ${message.id}`, data);
+    this.logger.log(`Completed processing message: ${message.id}`);
   }
 
-  @AzureStorageQueueHandler({
+  @AzureStorageQueueHandler<OrderData>({
     queueName: 'order-processing',
     pollingInterval: 1000,
     visibilityTimeout: 60,
     maxMessages: 20,
     maxDequeueCount: 10,
   })
-  async handleOrderProcessing(message: any) {
+  async handleOrderProcessing(message: AzureStorageQueueMessage<OrderData>) {
     this.logger.log(`Processing order: ${message.id}`);
 
     try {
-      const orderData = JSON.parse(message.body);
+      // Strongly typed message body - no need for parsing
+      const orderData = message.body;
+
+      // Full type safety with IDE intellisense
+      this.logger.log(
+        `Processing order ${orderData.orderId} for ${orderData.customerName}`,
+      );
+      this.logger.log(`Order contains ${orderData.items.length} items`);
+      this.logger.log(`Total amount: $${orderData.total}`);
+
       // Process order logic here
 
       this.logger.log(`Order processed successfully: ${orderData.orderId}`);
@@ -144,6 +177,7 @@ export class MessageProcessorService {
 | Option              | Type     | Description                           | Default        |
 | ------------------- | -------- | ------------------------------------- | -------------- |
 | `queueName`         | `string` | Name of the Azure Storage Queue       | _required_     |
+| `messageBodyType`   | `T`      | Type hint for message body            | _optional_     |
 | `pollingInterval`   | `number` | Polling interval in milliseconds      | Module default |
 | `visibilityTimeout` | `number` | Message visibility timeout in seconds | Module default |
 | `maxMessages`       | `number` | Maximum messages to retrieve per poll | `1`            |
@@ -178,68 +212,125 @@ export class AppModule {}
 import { Injectable } from '@nestjs/common';
 import { AzureStorageQueueService } from '@omnihash/nestjs-azure-storage-queue';
 
+// Define your message types
+interface UserNotification {
+  userId: string;
+  message: string;
+  timestamp: string;
+}
+
+interface OrderUpdate {
+  orderId: string;
+  status: string;
+  updatedAt: string;
+}
+
 @Injectable()
 export class NotificationService {
   constructor(private readonly queueService: AzureStorageQueueService) {}
 
   async sendNotification(userId: string, message: string) {
-    const queueMessage = JSON.stringify({
+    // Create a strongly-typed message
+    const notification: UserNotification = {
       userId,
       message,
       timestamp: new Date().toISOString(),
-    });
+    };
 
-    await this.queueService.sendMessage('user-notifications', queueMessage);
+    // Send typed message - automatic serialization
+    await this.queueService.sendMessage<UserNotification>(
+      'user-notifications',
+      notification,
+    );
   }
 
   async sendOrderUpdate(orderId: string, status: string) {
-    const orderMessage = JSON.stringify({
+    // Create a strongly-typed message
+    const update: OrderUpdate = {
       orderId,
       status,
       updatedAt: new Date().toISOString(),
-    });
+    };
 
-    await this.queueService.sendMessage('order-processing', orderMessage);
+    // Send typed message - automatic serialization
+    await this.queueService.sendMessage<OrderUpdate>(
+      'order-processing',
+      update,
+    );
+  }
+
+  // You can still send simple string messages
+  async sendSimpleMessage(queueName: string, text: string) {
+    await this.queueService.sendMessage(queueName, text);
   }
 }
 ```
 
-### Multiple Queue Handlers
+### Multiple Queue Handlers with Type Safety
 
 ```typescript
 @Injectable()
 export class MultiQueueProcessor {
   private readonly logger = new Logger(MultiQueueProcessor.name);
 
-  @AzureStorageQueueHandler({
-    queueName: 'high-priority',
-    pollingInterval: 1000,
-    maxMessages: 5,
-  })
-  async handleHighPriority(message: any) {
-    this.logger.log(`High priority: ${message.body}`);
-    // Handle high priority messages
+  // High priority tasks with custom types
+  interface HighPriorityTask {
+    taskId: string;
+    priority: number;
+    data: Record<string, unknown>;
   }
 
+  @AzureStorageQueueHandler<HighPriorityTask>({
+    queueName: 'high-priority',
+    pollingInterval: 1000,
+    maxMessages: 5
+  })
+  async handleHighPriority(message: AzureStorageQueueMessage<HighPriorityTask>) {
+    const task = message.body;
+    this.logger.log(`High priority task ${task.taskId} with priority ${task.priority}`);
+    // Handle high priority messages with full type safety
+  }
+
+  // Simple string messages for low priority queue
   @AzureStorageQueueHandler({
     queueName: 'low-priority',
     pollingInterval: 10000,
     maxMessages: 10,
   })
-  async handleLowPriority(message: any) {
-    this.logger.log(`Low priority: ${message.body}`);
-    // Handle low priority messages
+  async handleLowPriority(message: AzureStorageQueueMessage) {
+    this.logger.log(`Low priority message: ${message.body}`);
+    // Handle simple string messages
   }
 
-  @AzureStorageQueueHandler({
+  // Batch processing with complex objects
+  interface BatchItem {
+    items: Array<{ id: string; action: string }>;
+    batchId: string;
+    processingOptions: {
+      parallel: boolean;
+      timeout: number;
+    };
+  }
+
+  @AzureStorageQueueHandler<BatchItem>({
     queueName: 'batch-processing',
     pollingInterval: 5000,
     maxMessages: 32, // Azure Storage Queue max
-    visibilityTimeout: 120,
+    visibilityTimeout: 120
   })
-  async handleBatchProcessing(message: any) {
-    this.logger.log(`Batch processing: ${message.body}`);
-    // Handle batch processing
+  async handleBatchProcessing(message: AzureStorageQueueMessage<BatchItem>) {
+    const batch = message.body;
+    this.logger.log(`Processing batch ${batch.batchId} with ${batch.items.length} items`);
+
+    // Type-safe access to all properties
+    if (batch.processingOptions.parallel) {
+      this.logger.log(`Processing items in parallel with ${batch.processingOptions.timeout}ms timeout`);
+    }
+
+    // Process batch items
+    for (const item of batch.items) {
+      this.logger.log(`- Item ${item.id}: ${item.action}`);
+    }
   }
 }
 ```
@@ -251,14 +342,16 @@ export class MultiQueueProcessor {
 Messages received by your handlers will have the following structure:
 
 ```typescript
-interface QueueMessage {
+interface AzureStorageQueueMessage<T = string> {
   id: string; // Message ID
-  body: string; // Message content
+  body: T; // Typed message content
   dequeueCount: number; // Number of times dequeued
   insertedOn: Date; // When message was inserted
   expiresOn: Date; // When message expires
 }
 ```
+
+Where `T` is the type of your message body. For simple string messages, it defaults to `string`. For complex objects, you can define your own interface.
 
 ---
 
@@ -295,6 +388,77 @@ async handleWithErrors(message: any) {
 }
 ```
 
+### Message Schema Validation
+
+You can combine type hints with schema validation libraries for runtime safety:
+
+```typescript
+import { z } from 'zod';
+import { validateOrReject } from 'class-validator';
+import { plainToInstance } from 'class-transformer';
+
+// Option 1: Using Zod
+const UserSchema = z.object({
+  userId: z.string(),
+  email: z.string().email(),
+  preferences: z.object({
+    notifications: z.boolean(),
+    theme: z.enum(['light', 'dark']),
+  }),
+});
+
+type User = z.infer<typeof UserSchema>;
+
+@AzureStorageQueueHandler<User>({
+  queueName: 'user-updates'
+})
+async handleUserUpdates(message: AzureStorageQueueMessage<User>) {
+  try {
+    // Validate at runtime
+    UserSchema.parse(message.body);
+
+    // Process validated message
+    await this.processUserUpdate(message.body);
+  } catch (error) {
+    this.logger.error(`Invalid message schema: ${error.message}`);
+    // Handle invalid schema (do not retry)
+  }
+}
+
+// Option 2: Using class-validator
+class OrderDto {
+  @IsString()
+  orderId: string;
+
+  @IsNumber()
+  amount: number;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  items: OrderItemDto[];
+}
+
+@AzureStorageQueueHandler<OrderDto>({
+  queueName: 'orders',
+  messageBodyType: {} as OrderDto,
+})
+async handleOrder(message: AzureStorageQueueMessage<OrderDto>}) {
+  try {
+    // Transform plain object to class instance
+    const orderDto = plainToInstance(OrderDto, message.body);
+
+    // Validate the instance
+    await validateOrReject(orderDto);
+
+    // Process validated message
+    await this.processOrder(orderDto);
+  } catch (errors) {
+    this.logger.error(`Validation failed:`, errors);
+    // Handle invalid data
+  }
+}
+```
+
 ---
 
 ## Best Practices
@@ -305,6 +469,8 @@ async handleWithErrors(message: any) {
 4. **Monitoring**: Use the built-in logging to monitor queue processing
 5. **Error Handling**: Implement proper error handling and poison message detection
 6. **Resource Cleanup**: The module automatically cleans up polling intervals on shutdown
+7. **Type Definitions**: Define TypeScript interfaces for all your message types
+8. **Schema Validation**: Combine type hints with runtime validation for maximum safety
 
 ---
 
@@ -324,13 +490,13 @@ async handleWithErrors(message: any) {
 
 #### Methods
 
-- **`sendMessage(queueName: string, message: string): Promise<void>`**  
-  Send a message to the specified queue
+- **`sendMessage<T = string>(queueName: string, message: T): Promise<void>`**  
+  Send a typed message to the specified queue
 
 - **`createQueueIfNotExists(queueName: string): Promise<QueueClient>`**  
   Create a queue if it doesn't exist and return the client
 
-- **`startPolling(options: PollingOptions, handler: Function): Promise<void>`**  
+- **`startPolling<T = string>(options: AzureStorageQueuePollingOptions, handler: (message: AzureStorageQueueMessage<T>) => Promise<void>): Promise<void>`**  
   Start polling a queue (used internally by the decorator)
 
 - **`stopPolling(queueName: string): void`**  
@@ -341,8 +507,10 @@ async handleWithErrors(message: any) {
 Decorator to mark methods as queue message handlers.
 
 ```typescript
-@AzureStorageQueueHandler(options: AzureStorageQueuePollingOptions)
+@AzureStorageQueueHandler<T = string>(options: AzureStorageQueuePollingOptions<T>)
 ```
+
+Where `T` is the type of message body you expect to receive.
 
 ---
 

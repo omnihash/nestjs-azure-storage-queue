@@ -1,4 +1,4 @@
-export interface AzureStorageQueueMessage<T> {
+export interface AzureStorageQueueMessage<T = string> {
   id: string;
   body: T;
   dequeueCount: number;
